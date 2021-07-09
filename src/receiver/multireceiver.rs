@@ -1,199 +1,280 @@
-use crate::receiver::{
-    DecoderStateMachine, DecodingError, DefaultInput, Error, Event, PinInput, Poll, Receiver,
+use crate::{
+    receiver::{
+        DecoderStateMachine, DefaultInput, Event, PinInput, Receiver,
+    },
+    protocol::{NecCommand, Rc5Command, Rc6Command, Nec16Command, NecSamsungCommand, NecAppleCommand},
 };
 #[cfg(feature = "embedded-hal")]
 use embedded_hal::digital::v2::InputPin;
 
-pub struct MultiReceiver<P1, P2, IN>
-where
-    P1: DecoderStateMachine,
-    P2: DecoderStateMachine,
-{
-    r1: Receiver<P1, Event, DefaultInput>,
-    r2: Receiver<P2, Event, DefaultInput>,
+pub struct MultiReceiver<Receivers: ReceiverWrapper, IN> {
+    receivers: Receivers::Receivers,
     input: IN,
 }
 
+impl<Receivers: ReceiverWrapper, IN> MultiReceiver<Receivers, IN> {
+    pub fn new(res: usize, input: IN) -> Self {
+        MultiReceiver {
+            input,
+            receivers: Receivers::receivers(res)
+        }
+    }
+
+    pub fn event_generic(&mut self, dt: usize, edge: bool) -> Receivers::Commands {
+        Receivers::event(&mut self.receivers, dt, edge)
+    }
+}
+
+
 #[cfg(feature = "embedded-hal")]
-impl<P1, P2, PIN: InputPin> MultiReceiver<P1, P2, PinInput<PIN>>
+impl<Receivers, PIN: InputPin> MultiReceiver<Receivers, PinInput<PIN>>
 where
-    P1: DecoderStateMachine,
-    P2: DecoderStateMachine,
+    Receivers: ReceiverWrapper,
 {
     pub fn event(
         &mut self,
         dt: usize,
-    ) -> Result<(Option<P1::Cmd>, Option<P2::Cmd>), Error<PIN::Error>> {
-        let edge = self.input.0.is_low().map_err(Error::Hal)?;
+    ) -> Result<Receivers::Commands, PIN::Error> {
+        let edge = self.input.0.is_low()?;
+        Ok(self.event_generic(dt, edge))
+    }
 
-        self.event_generic(dt, edge).map_err(Into::into)
+    pub fn pin(&mut self) -> &mut PIN {
+        &mut self.input.0
     }
 }
 
-impl<P1, P2, IN> MultiReceiver<P1, P2, IN>
-where
-    P1: DecoderStateMachine,
-    P2: DecoderStateMachine,
-{
-    pub fn event_generic(
-        &mut self,
-        dt: usize,
-        edge: bool,
-    ) -> Result<(Option<P1::Cmd>, Option<P2::Cmd>), DecodingError> {
-        Ok((self.r1.event(dt, edge)?, self.r2.event(dt, edge)?))
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum CmdEnum {
+    Nec(NecCommand),
+    Nec16(Nec16Command),
+    NecSamsung(NecSamsungCommand),
+    NecApple(NecAppleCommand),
+    Rc5(Rc5Command),
+    Rc6(Rc6Command),
+}
+
+impl From<NecCommand> for CmdEnum {
+    fn from(cmd: NecCommand) -> CmdEnum {
+        CmdEnum::Nec(cmd)
+    }
+}
+impl From<Nec16Command> for CmdEnum {
+    fn from(cmd: Nec16Command) -> CmdEnum {
+        CmdEnum::Nec16(cmd)
+    }
+}
+impl From<NecSamsungCommand> for CmdEnum {
+    fn from(cmd: NecSamsungCommand) -> CmdEnum {
+        CmdEnum::NecSamsung(cmd)
+    }
+}
+impl From<NecAppleCommand> for CmdEnum {
+    fn from(cmd: NecAppleCommand) -> CmdEnum {
+        CmdEnum::NecApple(cmd)
     }
 }
 
-pub struct MultiReceiver5<P1, P2, P3, P4, P5, MD, IN>
-where
-    P1: DecoderStateMachine,
-    P2: DecoderStateMachine,
-    P3: DecoderStateMachine,
-    P4: DecoderStateMachine,
-    P5: DecoderStateMachine,
-{
-    r1: Receiver<P1, Event, DefaultInput>,
-    r2: Receiver<P2, Event, DefaultInput>,
-    r3: Receiver<P3, Event, DefaultInput>,
-    r4: Receiver<P4, Event, DefaultInput>,
-    r5: Receiver<P5, Event, DefaultInput>,
-    data: MD,
-    input: IN,
+impl From<Rc5Command> for CmdEnum {
+    fn from(cmd: Rc5Command) -> CmdEnum {
+        CmdEnum::Rc5(cmd)
+    }
+}
+impl From<Rc6Command> for CmdEnum {
+    fn from(cmd: Rc6Command) -> CmdEnum {
+        CmdEnum::Rc6(cmd)
+    }
 }
 
-#[cfg(feature = "embedded-hal")]
-impl<P1, P2, P3, P4, P5, PIN: InputPin> MultiReceiver5<P1, P2, P3, P4, P5, Poll, PinInput<PIN>>
-where
+pub trait ReceiverWrapper {
+    type Receivers: Default;
+    type Commands;
+
+    fn receivers(res: usize) -> Self::Receivers;
+
+    fn event(rs: &mut Self::Receivers, dt: usize, flank: bool) -> Self::Commands;
+}
+
+
+impl<P1, P2> ReceiverWrapper for (P1, P2) where
     P1: DecoderStateMachine,
     P2: DecoderStateMachine,
-    P3: DecoderStateMachine,
-    P4: DecoderStateMachine,
-    P5: DecoderStateMachine,
+    P1::Cmd: Into<CmdEnum>,
+    P2::Cmd: Into<CmdEnum>,
 {
-    #[inline(always)]
-    pub fn poll(
-        &mut self,
-    ) -> Result<
+    type Receivers = (Receiver<P1, Event, DefaultInput>, Receiver<P2, Event, DefaultInput>);
+    type Commands = [Option<CmdEnum>; 2];
+
+    fn receivers(res: usize) -> Self::Receivers {
         (
-            Option<P1::Cmd>,
-            Option<P2::Cmd>,
-            Option<P3::Cmd>,
-            Option<P4::Cmd>,
-            Option<P5::Cmd>,
-        ),
-        Error<PIN::Error>,
-    > {
-        let edge = self.input.0.is_low().map_err(Error::Hal)?;
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+        )
+    }
 
-        self.data.clock = self.data.clock.wrapping_add(1);
-
-        if edge == self.data.edge {
-            return Ok((None, None, None, None, None));
-        }
-
-        let ds = self.data.clock.wrapping_sub(self.data.last_edge);
-
-        self.data.edge = edge;
-        self.data.last_edge = self.data.clock;
-
-        self.event_generic(ds, edge).map_err(Into::into)
+    fn event(rs: &mut Self::Receivers, dt: usize, edge: bool) -> Self::Commands {
+        [
+            rs.0.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.1.event(dt, edge).unwrap_or_default().map(Into::into),
+        ]
     }
 }
 
-impl<P1, P2, P3, P4, P5, MD, IN> MultiReceiver5<P1, P2, P3, P4, P5, MD, IN>
-where
+impl<P1, P2, P3> ReceiverWrapper for (P1, P2, P3) where
+    P1: DecoderStateMachine,
+    P2: DecoderStateMachine,
+    P3: DecoderStateMachine,
+    P1::Cmd: Into<CmdEnum>,
+    P2::Cmd: Into<CmdEnum>,
+    P3::Cmd: Into<CmdEnum>,
+{
+    type Receivers = (
+        Receiver<P1, Event, DefaultInput>,
+        Receiver<P2, Event, DefaultInput>,
+        Receiver<P3, Event, DefaultInput>,
+    );
+    type Commands = [Option<CmdEnum>; 3];
+
+    fn receivers(res: usize) -> Self::Receivers {
+        (
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+        )
+    }
+
+    fn event(rs: &mut Self::Receivers, dt: usize, edge: bool) -> Self::Commands {
+        [
+            rs.0.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.1.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.2.event(dt, edge).unwrap_or_default().map(Into::into),
+        ]
+    }
+}
+
+impl<P1, P2, P3, P4> ReceiverWrapper for (P1, P2, P3, P4) where
+    P1: DecoderStateMachine,
+    P2: DecoderStateMachine,
+    P3: DecoderStateMachine,
+    P4: DecoderStateMachine,
+    P1::Cmd: Into<CmdEnum>,
+    P2::Cmd: Into<CmdEnum>,
+    P3::Cmd: Into<CmdEnum>,
+    P4::Cmd: Into<CmdEnum>,
+{
+    type Receivers = (
+        Receiver<P1, Event, DefaultInput>,
+        Receiver<P2, Event, DefaultInput>,
+        Receiver<P3, Event, DefaultInput>,
+        Receiver<P4, Event, DefaultInput>,
+    );
+    type Commands = [Option<CmdEnum>; 4];
+
+    fn receivers(res: usize) -> Self::Receivers {
+        (
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+        )
+    }
+
+    fn event(rs: &mut Self::Receivers, dt: usize, edge: bool) -> Self::Commands {
+        [
+            rs.0.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.1.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.2.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.3.event(dt, edge).unwrap_or_default().map(Into::into),
+        ]
+    }
+}
+
+impl<P1, P2, P3, P4, P5> ReceiverWrapper for (P1, P2, P3, P4, P5) where
     P1: DecoderStateMachine,
     P2: DecoderStateMachine,
     P3: DecoderStateMachine,
     P4: DecoderStateMachine,
     P5: DecoderStateMachine,
-    MD: Default,
+    P1::Cmd: Into<CmdEnum>,
+    P2::Cmd: Into<CmdEnum>,
+    P3::Cmd: Into<CmdEnum>,
+    P4::Cmd: Into<CmdEnum>,
+    P5::Cmd: Into<CmdEnum>,
 {
-    pub fn new(resolution: usize, input: IN) -> Self {
-        MultiReceiver5 {
-            r1: Receiver::new(resolution, DefaultInput),
-            r2: Receiver::new(resolution, DefaultInput),
-            r3: Receiver::new(resolution, DefaultInput),
-            r4: Receiver::new(resolution, DefaultInput),
-            r5: Receiver::new(resolution, DefaultInput),
-            data: MD::default(),
-            input,
-        }
-    }
+    type Receivers = (
+        Receiver<P1, Event, DefaultInput>,
+        Receiver<P2, Event, DefaultInput>,
+        Receiver<P3, Event, DefaultInput>,
+        Receiver<P4, Event, DefaultInput>,
+        Receiver<P5, Event, DefaultInput>,
+    );
+    type Commands = [Option<CmdEnum>; 5];
 
-    pub fn event_generic(
-        &mut self,
-        dt: usize,
-        edge: bool,
-    ) -> Result<
+    fn receivers(res: usize) -> Self::Receivers {
         (
-            Option<P1::Cmd>,
-            Option<P2::Cmd>,
-            Option<P3::Cmd>,
-            Option<P4::Cmd>,
-            Option<P5::Cmd>,
-        ),
-        DecodingError,
-    > {
-        Ok((
-            self.r1.event(dt, edge).ok().flatten(),
-            self.r2.event(dt, edge).ok().flatten(),
-            self.r3.event(dt, edge).ok().flatten(),
-            self.r4.event(dt, edge).ok().flatten(),
-            self.r5.event(dt, edge).ok().flatten(),
-        ))
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+        )
+    }
+
+    fn event(rs: &mut Self::Receivers, dt: usize, edge: bool) -> Self::Commands {
+        [
+            rs.0.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.1.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.2.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.3.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.4.event(dt, edge).unwrap_or_default().map(Into::into),
+        ]
     }
 }
 
-/*
-macro_rules! multireceiver {
-    (
-        $(#[$outer:meta])*
-        $name:ident, [ $( ($N:ident, $P:ident) ),* ]
-    ) => {
+impl<P1, P2, P3, P4, P5, P6> ReceiverWrapper for (P1, P2, P3, P4, P5, P6) where
+    P1: DecoderStateMachine,
+    P2: DecoderStateMachine,
+    P3: DecoderStateMachine,
+    P4: DecoderStateMachine,
+    P5: DecoderStateMachine,
+    P6: DecoderStateMachine,
+    P1::Cmd: Into<CmdEnum>,
+    P2::Cmd: Into<CmdEnum>,
+    P3::Cmd: Into<CmdEnum>,
+    P4::Cmd: Into<CmdEnum>,
+    P5::Cmd: Into<CmdEnum>,
+    P6::Cmd: Into<CmdEnum>,
+{
+    type Receivers = (
+        Receiver<P1, Event, DefaultInput>,
+        Receiver<P2, Event, DefaultInput>,
+        Receiver<P3, Event, DefaultInput>,
+        Receiver<P4, Event, DefaultInput>,
+        Receiver<P5, Event, DefaultInput>,
+        Receiver<P6, Event, DefaultInput>,
+    );
+    type Commands = [Option<CmdEnum>; 6];
 
-    $(#[$outer])*
-    pub struct $name<$( $P: DecoderStateMachine ),* , IN> {
-        input: IN,
-        $( $N : Receiver<$P, Evented, GenericInput> ),*
+    fn receivers(res: usize) -> Self::Receivers {
+        (
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+            Receiver::new(res, DefaultInput {}),
+        )
     }
 
-    /*
-    impl<PIN, PINERR, $( $P ),* > $name <$( $P ),* , PIN>
-    where
-        PIN: InputPin<Error = PINERR>,
-        $( $P: InfraredReceiver),*,
-    {
-        pub fn new(pin: PIN, samplerate: usize) -> Self {
-            Self {
-                pin,
-                counter: 0,
-                $( $N: receiver::PollReceiver::new(samplerate)),*,
-            }
-        }
-
-        pub fn destroy(self) -> PIN {
-            self.pin
-        }
-
-        pub fn poll(&mut self) -> Result<( $( Option<$P::Cmd>),*), Error<PINERR>> {
-            let pinval = self.pin.is_low()
-                .map_err(|err| Error::Hal(err))?;
-
-            self.counter = self.counter.wrapping_add(1);
-
-            Ok(($(
-                match self.$N.poll(pinval, self.counter) {
-                    Ok(cmd) => cmd,
-                    Err(_err) => None,
-                }
-            ),* ))
-        }
+    fn event(rs: &mut Self::Receivers, dt: usize, edge: bool) -> Self::Commands {
+        [
+            rs.0.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.1.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.2.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.3.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.4.event(dt, edge).unwrap_or_default().map(Into::into),
+            rs.5.event(dt, edge).unwrap_or_default().map(Into::into),
+        ]
     }
-     */
-};
 }
-
-multireceiver!(MultiReceiver3, [(r1, R1), (r2, R2)]);
-
-*/

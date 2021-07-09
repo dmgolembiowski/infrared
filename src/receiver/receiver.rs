@@ -128,6 +128,12 @@ pub struct Receiver<SM: DecoderStateMachine = Capture, MD = Event, IN = DefaultI
     pub(crate) input: IN,
 }
 
+impl<SM: DecoderStateMachine, MD: Default> Default for Receiver<SM, MD, DefaultInput> {
+    fn default() -> Self {
+        Receiver::new(1_000_000, DefaultInput {})
+    }
+}
+
 impl<SM, MD, IN> Receiver<SM, MD, IN>
 where
     SM: DecoderStateMachine,
@@ -137,17 +143,6 @@ where
         let state = SM::state();
         let ranges = SM::ranges(resolution);
         let data = MD::default();
-
-        debug!("Creating receiver");
-
-        #[cfg(feature = "defmt")]
-        {
-            defmt::info!("{:?}", defmt::Debug2Format(&ranges));
-        }
-        #[cfg(feature = "log")]
-       {
-            log::info!("{:?}", &ranges);
-       }
 
         Receiver {
             state,
