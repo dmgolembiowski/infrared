@@ -1,9 +1,8 @@
 use crate::protocol::capture::Capture;
 
-use crate::receiver::iter::BufferIterator;
 use crate::receiver::{
-    BufferInput, Builder, DecoderState, DecoderStateMachine, DecodingError, DefaultInput, Error,
-    Event, PinInput, Poll, Status,
+    iter::BufferIterator, BufferInput, Builder, DecoderState, DecoderStateMachine, DecodingError,
+    DefaultInput, Error, Event, PinInput, Poll, Status,
 };
 #[cfg(feature = "remotes")]
 use crate::remotecontrol::{AsButton, Button, RemoteControl};

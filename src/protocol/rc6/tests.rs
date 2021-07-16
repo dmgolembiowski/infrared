@@ -1,7 +1,8 @@
-use crate::protocol::rc6::Rc6Command;
-use crate::protocol::Rc6;
-use crate::receiver::Receiver;
-use crate::sender::PulsedataBuffer;
+use crate::{
+    protocol::{rc6::Rc6Command, Rc6},
+    receiver::Receiver,
+    sender::PulsedataBuffer,
+};
 
 #[test]
 fn newpulse() {

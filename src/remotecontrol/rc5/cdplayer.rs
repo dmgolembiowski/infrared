@@ -1,6 +1,8 @@
-use crate::protocol::Rc5Command;
-use crate::remotecontrol::{Button, DeviceType, RemoteControl};
-use crate::ProtocolId;
+use crate::{
+    protocol::Rc5Command,
+    remotecontrol::{Button, DeviceType, RemoteControl},
+    ProtocolId,
+};
 use Button::*;
 
 pub struct CdPlayer;

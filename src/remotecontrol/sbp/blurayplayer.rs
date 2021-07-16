@@ -1,6 +1,8 @@
-use crate::protocol::SbpCommand;
-use crate::remotecontrol::{Button, DeviceType, RemoteControl};
-use crate::ProtocolId;
+use crate::{
+    protocol::SbpCommand,
+    remotecontrol::{Button, DeviceType, RemoteControl},
+    ProtocolId,
+};
 
 use Button::*;
 

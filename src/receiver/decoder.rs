@@ -1,5 +1,4 @@
-use crate::receiver::DecodingError;
-use crate::Protocol;
+use crate::{receiver::DecodingError, Protocol};
 
 /// Protocol decode state machine
 pub trait DecoderStateMachine: Protocol {

@@ -1,6 +1,8 @@
-use crate::protocol::NecAppleCommand;
-use crate::remotecontrol::{Button, DeviceType, RemoteControl};
-use crate::ProtocolId;
+use crate::{
+    protocol::NecAppleCommand,
+    remotecontrol::{Button, DeviceType, RemoteControl},
+    ProtocolId,
+};
 use Button::*;
 
 /// Apple Remote

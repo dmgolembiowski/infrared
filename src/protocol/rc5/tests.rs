@@ -1,7 +1,8 @@
-use crate::protocol::rc5::Rc5Command;
-use crate::protocol::Rc5;
-use crate::receiver::{Builder, Receiver};
-use crate::sender::PulsedataBuffer;
+use crate::{
+    protocol::{rc5::Rc5Command, Rc5},
+    receiver::{Builder, Receiver},
+    sender::PulsedataBuffer,
+};
 
 #[test]
 fn rc5_command() {

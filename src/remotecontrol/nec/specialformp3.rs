@@ -1,6 +1,8 @@
-use crate::protocol::NecCommand;
-use crate::remotecontrol::{Button, DeviceType, RemoteControl};
-use crate::ProtocolId;
+use crate::{
+    protocol::NecCommand,
+    remotecontrol::{Button, DeviceType, RemoteControl},
+    ProtocolId,
+};
 use Button::*;
 
 /// Generic Mp3 used by me for testing

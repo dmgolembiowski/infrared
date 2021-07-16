@@ -1,7 +1,8 @@
 use embedded_hal::digital::v2::InputPin;
-use infrared::protocol::NecSamsung;
-use infrared::protocol::Rc5;
-use infrared::receiver::{Builder, ConstReceiver, Event, Poll, Receiver};
+use infrared::{
+    protocol::{NecSamsung, Rc5},
+    receiver::{Builder, ConstReceiver, Event, Poll, Receiver},
+};
 
 #[test]
 fn const_embedded_hal_constreceiver() {

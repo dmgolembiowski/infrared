@@ -1,10 +1,12 @@
-use crate::protocol::nec::{
-    Nec16Command, NecAppleCommand, NecCommand, NecCommandVariant, NecSamsungCommand,
+use crate::{
+    protocol::{
+        nec::{Nec16Command, NecAppleCommand, NecCommand, NecCommandVariant, NecSamsungCommand},
+        Nec, NecApple,
+    },
+    receiver::Builder,
+    sender::PulsedataBuffer,
+    Receiver,
 };
-use crate::protocol::{Nec, NecApple};
-use crate::receiver::Builder;
-use crate::sender::PulsedataBuffer;
-use crate::Receiver;
 
 #[test]
 #[rustfmt::skip]
@@ -213,28 +215,18 @@ fn cmd_apple2009() {
 
 #[test]
 fn repeat() {
-
     let data = [
         // Command
-        0, 9130, 4532, 571, 562, 571, 562, 571, 562, 570, 563, 572, 562, 571, 562,
-        570, 562, 571, 562, 571, 1699, 570, 1697, 571, 1697, 571, 1698, 572, 1697, 570,
-        1699, 570, 1698, 571, 1698, 571, 562, 571, 563, 569, 564, 571, 1697, 571, 1698,
-        571, 562, 572, 562, 571, 562, 571, 1697, 571, 1697, 571, 1698, 570, 563, 571, 562,
-        569, 1698, 571, 1698, 570, 1699, 571,
-
+        0, 9130, 4532, 571, 562, 571, 562, 571, 562, 570, 563, 572, 562, 571, 562, 570, 562, 571,
+        562, 571, 1699, 570, 1697, 571, 1697, 571, 1698, 572, 1697, 570, 1699, 570, 1698, 571,
+        1698, 571, 562, 571, 563, 569, 564, 571, 1697, 571, 1698, 571, 562, 572, 562, 571, 562,
+        571, 1697, 571, 1697, 571, 1698, 570, 563, 571, 562, 569, 1698, 571, 1698, 570, 1699, 571,
         // Repeats
-        40648, 9124, 2260, 571,
-        97387, 9123, 2259, 571,
-        97385, 9125, 2260, 571,
-        97398, 9126, 2260, 571,
-        97380, 9120, 2258, 571,
-        97373, 9124, 2259, 572,
-        97409, 9124, 2258, 571,
-        97387];
+        40648, 9124, 2260, 571, 97387, 9123, 2259, 571, 97385, 9125, 2260, 571, 97398, 9126, 2260,
+        571, 97380, 9120, 2258, 571, 97373, 9124, 2259, 572, 97409, 9124, 2258, 571, 97387,
+    ];
 
-    let mut receiver = Builder::<Nec>::new()
-        .buffer(&data)
-        .build();
+    let mut receiver = Builder::<Nec>::new().buffer(&data).build();
 
     let mut iter = receiver.iter();
 
