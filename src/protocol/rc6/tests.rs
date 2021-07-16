@@ -14,16 +14,11 @@ fn newpulse() {
 
     sender.load::<Rc6, SAMPLE_RATE>(&cmd);
 
-    let b = sender.buf;
-    let len = sender.offset;
-
     let mut edge = false;
-
     let mut recv = Receiver::builder().rc6().resolution(SAMPLE_RATE).build();
-
     let mut res_cmd = None;
 
-    for dist in &b[..len] {
+    for dist in sender.buffer() {
         edge = !edge;
 
         let s0 = recv.state.state;
@@ -92,7 +87,7 @@ fn all_commands() {
             let mut recv = Receiver::builder()
                 .rc6()
                 .resolution(SAMPLE_RATE)
-                .buffer(&ptb.buf)
+                .buffer(&ptb.buffer())
                 .build();
 
             let cmdres = recv.iter().next().unwrap();

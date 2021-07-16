@@ -66,7 +66,7 @@ fn all_commands() {
             ptb.load::<Rc5, SAMPLERATE>(&cmd);
             let mut r = Builder::<Rc5>::new()
                 .resolution(SAMPLERATE)
-                .buffer(&ptb.buf)
+                .buffer(ptb.buffer())
                 .build();
 
             let cmdres = r.iter().next().unwrap();
@@ -87,7 +87,7 @@ fn one_freq<const F: usize>() {
     let mut ptb = PulsedataBuffer::<96>::new();
     let cmd: Rc5Command = Rc5Command::new(10, 2, false);
     ptb.load::<Rc5, F>(&cmd);
-    let mut r = Builder::<Rc5>::new().resolution(F).buffer(&ptb.buf).build();
+    let mut r = Builder::<Rc5>::new().resolution(F).buffer(ptb.buffer()).build();
 
     let cmdres = r.iter().next().unwrap();
     assert_eq!(cmd.addr, cmdres.addr);

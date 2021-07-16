@@ -173,7 +173,7 @@ fn one_freq<const F: usize>() {
     };
     ptb.load::<Nec, F>(&cmd);
 
-    println!("{:?}", &ptb.buf);
+    println!("{:?}", ptb.buffer());
 
     let mut receiver = Builder::<Nec>::new()
         .resolution(F)
@@ -228,12 +228,13 @@ fn repeat() {
 
     let mut receiver = Builder::<Nec>::new().buffer(&data).build();
 
-    let mut iter = receiver.iter();
+    let iter = receiver.iter();
 
     let cmds = iter.collect::<std::vec::Vec<_>>();
 
     assert_eq!(cmds.len(), 8);
-    assert_eq!(cmds[0].repeat, false);
-    assert_eq!(cmds[1].repeat, true);
-    assert_eq!(cmds[7].repeat, true);
+    assert!(!cmds[0].repeat);
+
+    let all_is_repeats = cmds.iter().skip(1).all(|cmd| cmd.repeat);
+    assert!(all_is_repeats);
 }

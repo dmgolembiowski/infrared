@@ -80,7 +80,7 @@ where
 
         match state {
             Status::Done => {
-                let cmd = SM::command(&mut self.state);
+                let cmd = SM::command(&self.state);
                 self.state.reset();
                 Ok(cmd)
             }

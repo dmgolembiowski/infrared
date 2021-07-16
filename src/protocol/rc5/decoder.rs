@@ -6,12 +6,12 @@ use crate::{
 const RC5_BASE_TIME: usize = 889;
 
 impl DecoderStateMachine for Rc5 {
-    type InternalStatus = Rc5Status;
-    type State = Rc5ReceiverState;
+    type State = Rc5DecoderState;
     type RangeData = InfraConstRange<2>;
+    type InternalStatus = Rc5Status;
 
     fn state() -> Self::State {
-        Rc5ReceiverState::default()
+        Rc5DecoderState::default()
     }
 
     fn ranges(resolution: usize) -> Self::RangeData {
@@ -67,13 +67,13 @@ impl<const R: usize> ConstDecodeStateMachine<R> for Rc5 {
 }
 
 #[derive(Default)]
-pub struct Rc5ReceiverState {
+pub struct Rc5DecoderState {
     pub(crate) status: Rc5Status,
     bitbuf: u16,
     pub(crate) clock: usize,
 }
 
-impl DecoderState for Rc5ReceiverState {
+impl DecoderState for Rc5DecoderState {
     fn reset(&mut self) {
         self.status = Rc5Status::Idle;
         self.bitbuf = 0;

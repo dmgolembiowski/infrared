@@ -1,8 +1,8 @@
 use crate::sender::ProtocolEncoder;
 
 pub(crate) struct PulsedataBuffer<const S: usize> {
-    pub buf: [usize; S],
-    pub offset: usize,
+    buf: [usize; S],
+    offset: usize,
 }
 
 impl<const S: usize> PulsedataBuffer<S> {

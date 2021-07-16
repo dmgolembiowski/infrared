@@ -17,7 +17,7 @@ const UNITS_AND_TOLERANCE: &[(usize, usize); 6] = &[
 ];
 
 impl DecoderStateMachine for Rc6 {
-    type State = Rc6ReceiverState;
+    type State = Rc6DecoderState;
     type RangeData = InfraConstRange<6>;
     type InternalStatus = Rc6Status;
 
@@ -36,7 +36,7 @@ impl DecoderStateMachine for Rc6 {
     }
 
     #[rustfmt::skip]
-    fn event_full(state: &mut Rc6ReceiverState, ranges: &Self::RangeData, rising: bool, dt: usize) -> Rc6Status {
+    fn event_full(state: &mut Rc6DecoderState, ranges: &Self::RangeData, rising: bool, dt: usize) -> Rc6Status {
         use Rc6Status::*;
 
         // Find the nbr of time unit ticks the dt represents
@@ -91,7 +91,7 @@ impl DecoderStateMachine for Rc6 {
         state.state
     }
 
-    fn command(state: &Rc6ReceiverState) -> Option<Self::Cmd> {
+    fn command(state: &Rc6DecoderState) -> Option<Self::Cmd> {
         Some(Rc6Command::from_bits(state.data, state.toggle))
     }
 }
@@ -100,7 +100,7 @@ impl<const R: usize> ConstDecodeStateMachine<R> for Rc6 {
     const RANGES: Self::RangeData = InfraConstRange::new(UNITS_AND_TOLERANCE, R);
 }
 
-pub struct Rc6ReceiverState {
+pub struct Rc6DecoderState {
     pub(crate) state: Rc6Status,
     data: u16,
     headerdata: u16,
@@ -108,7 +108,7 @@ pub struct Rc6ReceiverState {
     clock: usize,
 }
 
-impl DecoderState for Rc6ReceiverState {
+impl DecoderState for Rc6DecoderState {
     fn reset(&mut self) {
         self.state = Rc6Status::Idle;
         self.data = 0;
