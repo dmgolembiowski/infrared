@@ -47,40 +47,51 @@ where
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum CmdEnum {
+    #[cfg(feature = "nec")]
     Nec(NecCommand),
+    #[cfg(feature = "nec")]
     Nec16(Nec16Command),
+    #[cfg(feature = "nec")]
     NecSamsung(NecSamsungCommand),
+    #[cfg(feature = "nec")]
     NecApple(NecAppleCommand),
+    #[cfg(feature = "rc5")]
     Rc5(Rc5Command),
+    #[cfg(feature = "rc6")]
     Rc6(Rc6Command),
 }
 
+#[cfg(feature = "nec")]
 impl From<NecCommand> for CmdEnum {
     fn from(cmd: NecCommand) -> CmdEnum {
         CmdEnum::Nec(cmd)
     }
 }
+#[cfg(feature = "nec")]
 impl From<Nec16Command> for CmdEnum {
     fn from(cmd: Nec16Command) -> CmdEnum {
         CmdEnum::Nec16(cmd)
     }
 }
+#[cfg(feature = "nec")]
 impl From<NecSamsungCommand> for CmdEnum {
     fn from(cmd: NecSamsungCommand) -> CmdEnum {
         CmdEnum::NecSamsung(cmd)
     }
 }
+#[cfg(feature = "nec")]
 impl From<NecAppleCommand> for CmdEnum {
     fn from(cmd: NecAppleCommand) -> CmdEnum {
         CmdEnum::NecApple(cmd)
     }
 }
-
+#[cfg(feature = "rc5")]
 impl From<Rc5Command> for CmdEnum {
     fn from(cmd: Rc5Command) -> CmdEnum {
         CmdEnum::Rc5(cmd)
     }
 }
+#[cfg(feature = "rc6")]
 impl From<Rc6Command> for CmdEnum {
     fn from(cmd: Rc6Command) -> CmdEnum {
         CmdEnum::Rc6(cmd)
